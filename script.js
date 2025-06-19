@@ -263,28 +263,72 @@ function handleFormSubmission(e) {
     const submitButton = contactForm.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.textContent;
     
+    // Get form values
+    const name = formData.get('name') || '';
+    const email = formData.get('email') || '';
+    const company = formData.get('company') || '';
+    const message = formData.get('message') || '';
+    
+    // Validate required fields
+    if (!name.trim() || !email.trim() || !message.trim()) {
+        const errorMessage = currentLanguage === 'jp' ? 
+            '必須項目をすべて入力してください。' : 
+            'Please fill in all required fields.';
+        showNotification(errorMessage, 'error');
+        return;
+    }
+    
     // Show loading state
-    submitButton.innerHTML = '<span class="loading"></span> Sending...';
+    const loadingText = currentLanguage === 'jp' ? 'メールアプリを開いています...' : 'Opening email...';
+    submitButton.innerHTML = `<span class="loading"></span> ${loadingText}`;
     submitButton.disabled = true;
     
-    // Simulate form submission (replace with actual form handling)
+    // Create email content
+    const subject = encodeURIComponent(
+        currentLanguage === 'jp' ? 
+            `TRADINAお問い合わせ - ${name}様より` : 
+            `TRADINA Inquiry from ${name}`
+    );
+    
+    const emailBody = encodeURIComponent(
+        currentLanguage === 'jp' ?
+            `お名前: ${name}\n` +
+            `メールアドレス: ${email}\n` +
+            `会社名: ${company || '未記入'}\n\n` +
+            `プロジェクト詳細:\n${message}\n\n` +
+            `---\nTRADINAウェブサイトお問い合わせフォームより送信` :
+            `Name: ${name}\n` +
+            `Email: ${email}\n` +
+            `Company: ${company || 'Not specified'}\n\n` +
+            `Project Details:\n${message}\n\n` +
+            `---\nSent from TRADINA website contact form`
+    );
+    
+    // Create mailto link
+    const mailtoLink = `mailto:info@tradina.com?subject=${subject}&body=${emailBody}`;
+    
+    // Open email client
+    window.location.href = mailtoLink;
+    
+    // Reset button and show success message after short delay
     setTimeout(() => {
-        // Show success message
-        showNotification('Message sent successfully!', 'success');
+        submitButton.textContent = originalButtonText;
+        submitButton.disabled = false;
+        
+        const successMessage = currentLanguage === 'jp' ? 
+            'メールアプリが開きました。メールアプリからメッセージを送信してください。' : 
+            'Email client opened! Please send the email from your email app.';
+        showNotification(successMessage, 'success');
         
         // Reset form
         contactForm.reset();
-        
-        // Reset button
-        submitButton.textContent = originalButtonText;
-        submitButton.disabled = false;
         
         // Remove has-value class from inputs
         const formInputs = contactForm.querySelectorAll('input, textarea');
         formInputs.forEach(input => {
             input.classList.remove('has-value');
         });
-    }, 2000);
+    }, 1000);
 }
 
 // Notification system
@@ -294,11 +338,15 @@ function showNotification(message, type = 'info') {
     notification.textContent = message;
     
     // Style the notification
+    let backgroundColor = '#3b82f6'; // default info
+    if (type === 'success') backgroundColor = '#10b981';
+    if (type === 'error') backgroundColor = '#ef4444';
+    
     notification.style.cssText = `
         position: fixed;
         top: 100px;
         right: 20px;
-        background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+        background: ${backgroundColor};
         color: white;
         padding: 1rem 1.5rem;
         border-radius: 8px;
@@ -307,6 +355,8 @@ function showNotification(message, type = 'info') {
         transform: translateX(400px);
         transition: transform 0.3s ease;
         font-weight: 500;
+        max-width: 300px;
+        word-wrap: break-word;
     `;
     
     document.body.appendChild(notification);
